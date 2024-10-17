@@ -68,6 +68,30 @@ def precipitation():
 
     return jsonify(precipitation_data)
 
+# Stations route
+@app.route("/api/v1/0/stations")
+def stations():
+    # Query all stations
+    results = session.query(Station.station).all()
+
+    # Convert the query results to a list
+    all_stations = [station[0] for station in results]
+    return jsonify(all_stations)
+
+# TOBS route
+@app.route("/api/v1.0/tobs")
+def tobs():
+    #Query the temperature observations for the most active station for the last year of data
+    one_year_ago = dt.date(2017, 8, 23) - dt.timedelta(days=365)
+
+    results = session.query(Measurement.date, Measurement.tobs).\
+        filter(Measurement.station == 'USC00519281').\
+        filter(Measurement.date >= one_year_ago).all()
+    
+    # Convert the query results to a list
+    temps_list = list(np.ravel(results))
+    return jsonify(temps_list)
+
 # Start and end date routes
 @app.route("/api/v1.0/<start>")
 @app.route("/api/v1.0/<start>/<end>")
@@ -75,6 +99,12 @@ def start_end(start=None, end=None):
     if end:
         # Query min, avg, and max temperatures for the specified date range
         results = session.query(func.min(Measurement.tobs), func.avg(Measurement.tobs), 
+                                func.max(Measurement.tobs)).\
+            filter(Measurement.date >= start).\
+            filter(Measurement.date <= end).all()
+    else:
+        # If no end date is provided, just query from the start date onward
+        results = session.query(func.min(Measurement.tobs), func.avg(Measurement.tobs),
                                 func.max(Measurement.tobs)).\
             filter(Measurement.date >= start).all()
         
